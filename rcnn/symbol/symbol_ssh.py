@@ -13,8 +13,6 @@ def conv_act_layer(from_layer, name, num_filter, kernel=(1,1), pad=(0,0), \
     bias = mx.symbol.Variable(name="{}_bias".format(name),   
         init=mx.init.Constant(0.0), attr={'__lr_mult__': '2.0', '__wd_mult__': str(bias_wd_mult)})
     if not dcn:
-      #bias = mx.symbol.Variable(name="{}_bias".format(name),   
-      #    attr={'__lr_mult__': '2.0', '__wd_mult__': '0.0'})
       conv = mx.symbol.Convolution(data=from_layer, kernel=kernel, pad=pad, \
           stride=stride, num_filter=num_filter, name="{}".format(name), weight = weight, bias=bias)
     else:
@@ -46,8 +44,6 @@ def ssh_context_module(body, num_filters, name):
   conv7x7 = conv_act_layer(conv7x7_1, name+'_conv3_2',
       num_filters, kernel=(3, 3), pad=(1, 1), stride=(1, 1), act_type='', dcn=USE_DCN)
   return (conv5x5, conv7x7)
-  #conv4 = mx.sym.concat(*[conv2, conv3_2], dim=1, name = name+'_conv4')
-  #return conv4
 
 def ssh_detection_module(body, num_filters, name):
   conv3x3 = conv_act_layer(body, name+'_conv1',
@@ -183,21 +179,11 @@ def get_ssh_train():
     data = mx.symbol.Variable(name="data")
     var_label = False
     var_bbox_weight = False
-    if config.TRAIN.RPN_ENABLE_OHEM<0:
-      label = mx.symbol.Variable(name='label')
-      bbox_weight = mx.symbol.Variable(name='bbox_weight')
-      bbox_target = mx.symbol.Variable(name='bbox_target')
-      var_label = True
-      var_bbox_weight = True
 
     # shared convolutional layers
     conv_fpn_feat = get_ssh_conv(data)
     rpn_cls_score_list = []
     rpn_bbox_pred_list = []
-    #if config.TRAIN.RPN_ENABLE_OHEM==2:
-    #  label_list = []
-    #  bbox_target_list = []
-    #  bbox_weight_list = []
     ret_group = []
     for stride in config.RPN_FEAT_STRIDE:
       num_anchors = config.RPN_ANCHOR_CFG[str(stride)]['NUM_ANCHORS']
@@ -205,18 +191,6 @@ def get_ssh_train():
       bbox_target = mx.symbol.Variable(name='bbox_target_stride%d'%stride)
       bbox_weight = mx.symbol.Variable(name='bbox_weight_stride%d'%stride)
       rpn_relu = conv_fpn_feat[stride]
-      #rpn_cls_score = mx.symbol.Convolution(data=rpn_relu,
-      #                                      kernel=(1, 1), pad=(0, 0),
-      #                                      num_filter=2 * num_anchors,
-      #                                      weight=rpn_conv_cls_weight,
-      #                                      bias=rpn_conv_cls_bias,
-      #                                      name="rpn_cls_score_stride%s" % stride)
-      #rpn_bbox_pred = mx.symbol.Convolution(data=rpn_relu,
-      #                                      kernel=(1, 1), pad=(0, 0),
-      #                                      num_filter=4 * num_anchors,
-      #                                      weight=rpn_conv_bbox_weight,
-      #                                      bias=rpn_conv_bbox_bias,
-      #                                      name="rpn_bbox_pred_stride%s" % stride)
       if not config.USE_MAXOUT or stride!=config.RPN_FEAT_STRIDE[-1]:
         rpn_cls_score = conv_act_layer(rpn_relu, 'rpn_cls_score_stride%d'%stride, 2*num_anchors,
             kernel=(1,1), pad=(0,0), stride=(1, 1), act_type='')
@@ -268,90 +242,4 @@ def get_ssh_train():
 
     return mx.sym.Group(ret_group)
 
-    #rpn_bbox_pred_concat = mx.symbol.concat(*rpn_bbox_pred_list, dim=2)
-    #rpn_cls_score_concat = mx.symbol.concat(*rpn_cls_score_list, dim=2)
-
-    #if config.TRAIN.RPN_ENABLE_OHEM==1:
-    #  label, bbox_weight = mx.sym.Custom(op_type='rpn_fpn_ohem', cls_score=rpn_cls_score_concat, bbox_weight = bbox_weight , labels = label)
-    #rpn_cls_prob = mx.symbol.SoftmaxOutput(data=rpn_cls_score_concat,
-    #                                       label=label,
-    #                                       multi_output=True,
-    #                                       normalization='valid', use_ignore=True, ignore_label=-1,
-    #                                       name='rpn_cls_prob')
-
-    #rpn_bbox_loss_ = bbox_weight * mx.symbol.smooth_l1(name='rpn_bbox_loss_', scalar=3.0,
-    #                                                       data=(rpn_bbox_pred_concat - bbox_target))
-    #rpn_bbox_loss = mx.sym.MakeLoss(name='rpn_bbox_loss', data=rpn_bbox_loss_,
-    #                                grad_scale=1.0 / config.TRAIN.RPN_BATCH_SIZE)
-    #rpn_group = [rpn_cls_prob, rpn_bbox_loss, mx.symbol.BlockGrad(label)]
-    #group = mx.symbol.Group(rpn_group)
-    #return group
-
-
-def get_ssh_test():
-    """
-    Region Proposal Network with VGG
-    :return: Symbol
-    """
-    data = mx.symbol.Variable(name="data")
-    im_info = mx.symbol.Variable(name="im_info")
-
-    # shared convolutional layers
-    conv_fpn_feat = get_ssh_conv(data)
-    rpn_cls_prob_dict = {}
-    rpn_bbox_pred_dict = {}
-    for stride in config.RPN_FEAT_STRIDE:
-      num_anchors = config.RPN_ANCHOR_CFG[str(stride)]['NUM_ANCHORS']
-      rpn_relu = conv_fpn_feat[stride]
-      if not config.USE_MAXOUT or stride!=config.RPN_FEAT_STRIDE[-1]:
-        rpn_cls_score = conv_act_layer(rpn_relu, 'rpn_cls_score_stride%d'%stride, 2*num_anchors,
-            kernel=(1,1), pad=(0,0), stride=(1, 1), act_type='')
-      else:
-        cls_list = []
-        for a in range(num_anchors):
-          rpn_cls_score_bg = conv_act_layer(rpn_relu, 'rpn_cls_score_stride%d_anchor%d_bg'%(stride,a), 3,
-              kernel=(1,1), pad=(0,0), stride=(1, 1), act_type='')
-          rpn_cls_score_bg = mx.sym.max(rpn_cls_score_bg, axis=1, keepdims=True)
-          cls_list.append(rpn_cls_score_bg)
-          rpn_cls_score_fg = conv_act_layer(rpn_relu, 'rpn_cls_score_stride%d_anchor%d_fg'%(stride,a), 1,
-              kernel=(1,1), pad=(0,0), stride=(1, 1), act_type='')
-          cls_list.append(rpn_cls_score_fg)
-        rpn_cls_score = mx.sym.concat(*cls_list, dim=1)
-      rpn_bbox_pred = conv_act_layer(rpn_relu, 'rpn_bbox_pred_stride%d'%stride, 4*num_anchors,
-          kernel=(1,1), pad=(0,0), stride=(1, 1), act_type='')
-
-
-      # prepare rpn data
-      rpn_cls_score_reshape = mx.symbol.Reshape(data=rpn_cls_score,
-                                                shape=(0, 2, -1, 0),
-                                                name="rpn_cls_score_reshape_stride%d" % stride)
-
-      rpn_cls_prob = mx.symbol.SoftmaxActivation(data=rpn_cls_score_reshape,
-                                                 mode="channel",
-                                                 name="rpn_cls_prob_stride%d" % stride)
-      rpn_cls_prob_reshape = mx.symbol.Reshape(data=rpn_cls_prob,
-                                               shape=(0, 2 * num_anchors, -1, 0),
-                                               name='rpn_cls_prob_reshape_stride%d' % stride)
-
-      rpn_cls_prob_dict.update({'cls_prob_stride%d' % stride: rpn_cls_prob_reshape})
-      rpn_bbox_pred_dict.update({'bbox_pred_stride%d' % stride: rpn_bbox_pred})
-
-    args_dict = dict(rpn_cls_prob_dict.items()+rpn_bbox_pred_dict.items())
-    aux_dict = {'im_info':im_info,'name':'rois',
-                'op_type':'proposal_fpn_out','output_score':True,
-                'feat_stride':config.RPN_FEAT_STRIDE,
-                'scales':tuple(np.array(config.ANCHOR_SCALES).flatten()),
-                'ratios':tuple(np.array(config.ANCHOR_RATIOS).flatten()),
-                'rpn_pre_nms_top_n':config.TEST.PROPOSAL_PRE_NMS_TOP_N,
-                'rpn_post_nms_top_n':config.TEST.PROPOSAL_POST_NMS_TOP_N,
-                'rpn_min_size':config.TEST.RPN_MIN_SIZE,
-                'threshold':config.TEST.RPN_NMS_THRESH}
-    # Proposal
-    group = mx.symbol.Custom(**dict(args_dict.items()+aux_dict.items()))
-
-    return group
-
-
-def get_ssh_rpn_test():
-  return get_ssh_test()
 
