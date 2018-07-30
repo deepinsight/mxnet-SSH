@@ -262,7 +262,7 @@ def parse_args():
     parser.add_argument('--no_shuffle', help='disable random shuffle', action='store_true')
     parser.add_argument('--resume', help='continue training', action='store_true')
     # e2e
-    parser.add_argument('--gpus', help='GPU device to train with', default='0', type=str)
+    parser.add_argument('--gpus', help='GPU device to train with', default='0,1,2,3', type=str)
     parser.add_argument('--pretrained', help='pretrained model prefix', default=default.pretrained, type=str)
     parser.add_argument('--pretrained_epoch', help='pretrained model epoch', default=default.pretrained_epoch, type=int)
     parser.add_argument('--prefix', help='new model prefix', default=default.e2e_prefix, type=str)
