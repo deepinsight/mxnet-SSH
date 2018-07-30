@@ -8,4 +8,17 @@ Evaluation on WIDER FACE:
 | Original Caffe SSH | 0.93123  | 0.92106    | 0.84582  |
 | Our SSH Model      | 0.93489  | 0.92281    | 0.84525  |
 
-For more information, check our insightface repo.
+### Installation
+1. Clone the repository.
+
+2. Download MXNet VGG16 pretrained model from [here](http://data.dmlc.ml/models/imagenet/vgg/vgg16-0000.params) and put it under `model` directory.
+
+3. Type `make` to build necessary cxx libs.
+
+### Training
+
+```
+python train_ssh.py
+```
+
+For more information, check our insightface repository.
