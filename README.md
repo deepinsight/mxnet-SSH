@@ -1,5 +1,7 @@
 # mxnet-SSH
-Reproduce SSH (Single Stage Headless Face Detector) with MXNet
+Reproduce SSH (Single Stage Headless Face Detector) with MXNet.
+
+Original Caffe code: [https://github.com/mahyarnajibi/SSH](https://github.com/mahyarnajibi/SSH)
 
 Evaluation on WIDER FACE:
 
