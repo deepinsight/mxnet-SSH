@@ -1,13 +1,3 @@
-# --------------------------------------------------------
-# Deformable Convolutional Networks
-# Copyright (c) 2017 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Modified by Yuwen Xiong
-# --------------------------------------------------------
-
-"""
-Proposal Target Operator selects foreground and background roi and assigns label, bbox_transform to them.
-"""
 
 from __future__ import print_function
 import sys
