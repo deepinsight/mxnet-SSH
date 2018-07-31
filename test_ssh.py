@@ -214,7 +214,7 @@ def parse_args():
     parser.add_argument('--dataset_path', help='dataset path', default=default.dataset_path, type=str)
     # testing
     parser.add_argument('--prefix', help='model to test with', default=default.e2e_prefix, type=str)
-    parser.add_argument('--epoch', help='model to test with', default=default.e2e_epoch, type=int)
+    parser.add_argument('--epoch', help='model to test with', default=0, type=int)
     parser.add_argument('--gpu', help='GPU device to test with', default=7, type=int)
     parser.add_argument('--output', help='output folder', default=os.path.join(default.root_path, 'output'), type=str)
     parser.add_argument('--pyramid', help='enable pyramid test', action='store_true')
